@@ -28,20 +28,21 @@ class ModerationResult:
     tags: List[str]  # Policy tags that were triggered
     reason: str  # Human-readable explanation
     confidence: float  # Confidence level (0-1)
-    fallback_response: Optional[str] = None  # Response to use if action != ALLOW
+    # Response to use if action != ALLOW
+    fallback_response: Optional[str] = None
 
 
 class Moderator:
     """Handles content moderation according to safety policy."""
-    
+
     def __init__(self):
         """Initialize the moderator with safety rules."""
         self.safety_mode = SAFETY_MODE
         self._initialize_rules()
-    
+
     def _initialize_rules(self):
         """Initialize moderation rules mirrored from POLICY.md."""
-        
+
         self.crisis_keywords: List[str] = [
             "suicide", "suicidal", "suiside", "suicde", "sucid", "commit suicide", "kill myself",
             "killing myself", "kys", "kms", "end my life", "end it all", "take my life",
@@ -136,13 +137,13 @@ class Moderator:
                 "harmful": 0.5,
             },
             "balanced": {
-                "crisis": 0.5,
-                "medical": 0.6,
-                "harmful": 0.6,
+                "crisis": 0.8,
+                "medical": 0.8,
+                "harmful": 0.7,
             },
             "permissive": {
-                "crisis": 0.7,
-                "medical": 0.75,
+                "crisis": 0.86,
+                "medical": 0.86,
                 "harmful": 0.8,
             },
         }
@@ -202,21 +203,26 @@ Your wellbeing is important. How can I support you today?
         }
 
         self.model_medical_advice_patterns: List[re.Pattern] = [
-            re.compile(r"\bI (?:recommend|suggest|prescribe) (?:you )?(?:take|use|try)\b.*", re.IGNORECASE),
+            re.compile(
+                r"\bI (?:recommend|suggest|prescribe) (?:you )?(?:take|use|try)\b.*", re.IGNORECASE),
             re.compile(r"\b(?:take|start|begin|use|try|increase|decrease|stop) (?:your )?(?:medication|meds|prozac|zoloft|xanax|antidepressants?|ssri?s?)\b", re.IGNORECASE),
-            re.compile(r"\b(?:take|use) (?:\d+ ?mg|milligrams?)\b", re.IGNORECASE),
+            re.compile(r"\b(?:take|use) (?:\d+ ?mg|milligrams?)\b",
+                       re.IGNORECASE),
             re.compile(r"\bI can diagnose (?:you|this)\b", re.IGNORECASE),
-            re.compile(r"\bthis means you have (?:depression|anxiety|bipolar|adhd|ocd|ptsd)\b", re.IGNORECASE),
+            re.compile(
+                r"\bthis means you have (?:depression|anxiety|bipolar|adhd|ocd|ptsd)\b", re.IGNORECASE),
         ]
 
         self.model_inappropriate_patterns: List[re.Pattern] = [
-            re.compile(r"\byou should (?:hurt|harm|kill|attack) (?:yourself|someone)\b", re.IGNORECASE),
+            re.compile(
+                r"\byou should (?:hurt|harm|kill|attack) (?:yourself|someone)\b", re.IGNORECASE),
             re.compile(r"\b(?:let's|lets) get revenge\b", re.IGNORECASE),
         ]
 
     def _get_threshold(self, category: str) -> float:
         """Return the confidence threshold for the given category based on safety mode."""
-        mode_config = self.confidence_thresholds.get(self.safety_mode, self.confidence_thresholds["balanced"])
+        mode_config = self.confidence_thresholds.get(
+            self.safety_mode, self.confidence_thresholds["balanced"])
         return mode_config.get(category, 1.0)
 
     def moderate(
@@ -227,19 +233,19 @@ Your wellbeing is important. How can I support you today?
     ) -> ModerationResult:
         """
         Perform moderation on user input and/or model output.
-        
+
         Args:
             user_prompt: The user's input text
-            
+
         Returns:
             ModerationResult with action and explanation
-            
+
         IMPLEMENTATION ORDER:
         1. Check crisis (highest priority - must not miss)
         2. Check medical (prevent harmful advice)
         3. Check harmful content (filter inappropriate)
         """
-        
+
         # Example skeleton:
         # Step 1: Check for crisis indicators (highest priority)
         crisis_check = self._check_crisis(user_prompt)
@@ -263,14 +269,14 @@ Your wellbeing is important. How can I support you today?
             if output_check.action != ModerationAction.ALLOW:
                 logger.warning(f"Output violation: {output_check.reason}")
                 return output_check
-        
+
         # Check context for concerning patterns
         if context:
             context_check = self._check_context_patterns(context)
             if context_check.action != ModerationAction.ALLOW:
                 logger.info(f"Context concern: {context_check.reason}")
                 return context_check
-        
+
         # Default: Allow
         return ModerationResult(
             action=ModerationAction.ALLOW,
@@ -278,7 +284,7 @@ Your wellbeing is important. How can I support you today?
             reason="Content passes all safety checks",
             confidence=1.0,
         )
-    
+
     def _check_crisis(self, text: str) -> ModerationResult:
         """Check user input for crisis indicators and escalate when needed."""
 
@@ -292,7 +298,8 @@ Your wellbeing is important. How can I support you today?
             )
 
         keyword_hits = [kw for kw in self.crisis_keywords if kw in text_lower]
-        pattern_hits = [pat.pattern for pat in self.crisis_patterns if pat.search(text)]
+        pattern_hits = [
+            pat.pattern for pat in self.crisis_patterns if pat.search(text)]
 
         confidence = 0.0
         if keyword_hits:
@@ -306,10 +313,12 @@ Your wellbeing is important. How can I support you today?
         if (keyword_hits or pattern_hits) and confidence >= threshold:
             reason_parts = []
             if keyword_hits:
-                reason_parts.append(f"keywords: {', '.join(sorted(set(keyword_hits)))}")
+                reason_parts.append(
+                    f"keywords: {', '.join(sorted(set(keyword_hits)))}")
             if pattern_hits:
                 reason_parts.append("pattern indicators present")
-            reason = "Detected crisis indicators (" + "; ".join(reason_parts) + ")"
+            reason = "Detected crisis indicators (" + \
+                "; ".join(reason_parts) + ")"
             tags = ["crisis"]
             if keyword_hits:
                 tags.append("crisis_keyword")
@@ -329,7 +338,7 @@ Your wellbeing is important. How can I support you today?
             reason="No crisis indicators detected",
             confidence=confidence,
         )
-    
+
     def _check_medical(self, text: str) -> ModerationResult:
         """Detect medical boundary violations and trigger safe fallback."""
         text_lower = text.lower()
@@ -342,7 +351,8 @@ Your wellbeing is important. How can I support you today?
             )
 
         keyword_hits = [kw for kw in self.medical_keywords if kw in text_lower]
-        pattern_hits = [pat.pattern for pat in self.medical_patterns if pat.search(text)]
+        pattern_hits = [
+            pat.pattern for pat in self.medical_patterns if pat.search(text)]
 
         confidence = 0.0
         if keyword_hits:
@@ -356,10 +366,12 @@ Your wellbeing is important. How can I support you today?
         if (keyword_hits or pattern_hits) and confidence >= threshold:
             reason_parts = []
             if keyword_hits:
-                reason_parts.append(f"keywords: {', '.join(sorted(set(keyword_hits)))}")
+                reason_parts.append(
+                    f"keywords: {', '.join(sorted(set(keyword_hits)))}")
             if pattern_hits:
                 reason_parts.append("pattern indicators present")
-            reason = "Detected medical boundary request (" + "; ".join(reason_parts) + ")"
+            reason = "Detected medical boundary request (" + "; ".join(
+                reason_parts) + ")"
             tags = ["medical"]
             if keyword_hits:
                 tags.append("medical_keyword")
@@ -379,7 +391,7 @@ Your wellbeing is important. How can I support you today?
             reason="No medical requests detected",
             confidence=confidence,
         )
-    
+
     def _check_harmful(self, text: str) -> ModerationResult:
         """Filter for harmful requests involving violence, illegality, or harassment."""
 
@@ -406,7 +418,8 @@ Your wellbeing is important. How can I support you today?
 
             threshold = self._get_threshold("harmful")
             if confidence >= threshold:
-                tags = ["harmful"] + [f"harmful_{category}" for category in triggered]
+                tags = ["harmful"] + \
+                    [f"harmful_{category}" for category in triggered]
                 reason = "Harmful content detected in categories: " + ", ".join(
                     f"{category} (terms: {', '.join(sorted(set(matches)))})" for category, matches in triggered.items()
                 )
@@ -431,12 +444,14 @@ Your wellbeing is important. How can I support you today?
             reason=reason,
             confidence=confidence,
         )
-    
+
     def _check_model_output(self, response: str) -> ModerationResult:
         """Audit model responses for disallowed advice or unsafe suggestions."""
 
-        medical_flags = [pat.pattern for pat in self.model_medical_advice_patterns if pat.search(response)]
-        harmful_flags = [pat.pattern for pat in self.model_inappropriate_patterns if pat.search(response)]
+        medical_flags = [
+            pat.pattern for pat in self.model_medical_advice_patterns if pat.search(response)]
+        harmful_flags = [
+            pat.pattern for pat in self.model_inappropriate_patterns if pat.search(response)]
 
         if medical_flags:
             return ModerationResult(
@@ -462,9 +477,9 @@ Your wellbeing is important. How can I support you today?
             reason="Model output is appropriate",
             confidence=1.0,
         )
-    
+
     def _check_context_patterns(self, context: List[Dict]) -> ModerationResult:
-        
+
         # Check for escalation
         crisis_count = 0
         for turn in context:
@@ -473,7 +488,7 @@ Your wellbeing is important. How can I support you today?
                 for keyword in self.crisis_keywords:
                     if keyword in content:
                         crisis_count += 1
-        
+
         if crisis_count >= 3:
             return ModerationResult(
                 action=ModerationAction.SAFE_FALLBACK,
@@ -482,20 +497,22 @@ Your wellbeing is important. How can I support you today?
                 confidence=0.8,
                 fallback_response=self.fallback_templates["crisis"],
             )
-        
+
         return ModerationResult(
             action=ModerationAction.ALLOW,
             tags=[],
             reason="Conversation pattern is safe",
             confidence=1.0,
         )
-    
+
     def get_disclaimer(self) -> str:
         """Get initial disclaimer."""
         return self.fallback_templates.get("disclaimer", "")
 
+
 # Singleton instance
 _moderator_instance = None
+
 
 def get_moderator() -> Moderator:
     """Get singleton moderator instance."""
