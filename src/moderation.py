@@ -137,13 +137,13 @@ class Moderator:
                 "harmful": 0.5,
             },
             "balanced": {
-                "crisis": 0.8,
-                "medical": 0.8,
-                "harmful": 0.7,
+                "crisis": 0.5,
+                "medical": 0.6,
+                "harmful": 0.6,
             },
             "permissive": {
-                "crisis": 0.86,
-                "medical": 0.86,
+                "crisis": 0.7,
+                "medical": 0.75,
                 "harmful": 0.8,
             },
         }

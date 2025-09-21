@@ -234,15 +234,15 @@ CONFIDENCE_THRESHOLDS = {
     },
     "balanced": {
         # Balanced approach for production use
-        "crisis": 0.8,
-        "medical": 0.8,
-        "harmful": 0.7,
+        "crisis": 0.5,
+        "medical": 0.6,
+        "harmful": 0.6
     },
     "permissive": {
         # Minimum filtering - only clear violations
-        "crisis": 0.86,
-        "medical": 0.86,
-        "harmful": 0.8,
+        "crisis": 0.7,
+        "medical": 0.75,
+        "harmful": 0.8
     }
 }
 ```
