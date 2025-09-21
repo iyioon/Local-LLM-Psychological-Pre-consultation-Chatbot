@@ -114,7 +114,7 @@ class Moderator:
         self.harmful_content: Dict[str, List[str]] = {
             "violence": [
                 "attack", "attak", "attack them", "stab", "shoot", "kill someone", "kill somebody",
-                "hurt others", "hurt someone", "hurt somebody", "beat up", "beat him up",
+                "hurt others", "hurt someone", "hurt somebody", "hurt the person", "hurt them", "beat up", "beat him up",
                 "assault plan", "bomb making", "how to poison", "plan revenge"
             ],
             "illegal": [
